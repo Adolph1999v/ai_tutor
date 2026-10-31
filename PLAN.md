@@ -10,7 +10,9 @@ the beginning. Its GitHub snapshot is commit
 [Adolph1999v/ai_tutor](https://github.com/Adolph1999v/ai_tutor/tree/757d03fc6a2dddede61c9775cd657147828e31cc).
 
 The project and GitHub repository are named `ai_tutor`. The local branch is
-`main`. The reset and updated plan are awaiting the owner's commit and push.
+`main`. The reset and updated plan have been committed and pushed. The old
+application files have been removed from GitHub's current version. The project
+owner handles commits and pushes for subsequent documentation and code changes.
 
 We have agreed on the product requirements below. New application code has not
 been approved. The next step is a theory discussion about how document retrieval,
@@ -46,6 +48,12 @@ For each small part:
 
 Approval for a part does not approve coding later parts. Begin each new session
 with a short recap so the learning process remains easy to resume.
+
+Keep [README.md](README.md) updated with the project's purpose, current status,
+and setup instructions as they become available. Keep this plan updated with
+requirements, decisions, learning notes, and the next starting point. Describe
+planned capabilities as targets and record completion only after verification.
+Keep GitHub's About description aligned with the current project direction.
 
 ## Agreed tutor behavior
 
@@ -186,3 +194,4 @@ This sequence is a discussion aid. Each implementation still needs its own appro
 | 2026-10-31 | Build English normal mode, then personalities, then Tamil. | Validate the core teaching behavior before expanding presentation and language. |
 | 2026-10-31 | Put clickable quizzes and typed answers inside chat; preserve lesson state across detours. | Make the tutor interactive and able to collaborate through a continuing lesson. |
 | 2026-10-31 | Rename the local project and existing GitHub repository to `ai_tutor`; the owner will commit and push the restart. | Match the name to the tutor's purpose while keeping the repository history. |
+| 2026-10-31 | Maintain README.md, PLAN.md, and the GitHub About description as the project progresses. | Make current status and learning decisions easy to follow without presenting planned features as implemented. |
