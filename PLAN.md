@@ -1,325 +1,188 @@
-# Document AI Development Plan
-
-This is the living roadmap for turning Document AI from a clean RAG baseline into a
-professional, measurable, local-first RAG application. Update this file whenever a phase
-starts, an important decision changes, or a milestone is completed.
-
-## How we will work
-
-Every phase follows the same learning loop:
-
-1. **Theory before coding** — identify the concept, the failure mode it addresses, the design
-   choices, and the measurements that will tell us whether it helped.
-2. **Small implementation** — add one understandable capability at a time instead of combining
-   several unmeasured RAG techniques.
-3. **Verification** — run automated tests, a manual smoke test, and the relevant RAG evaluation.
-4. **Theory after coding** — explain what changed, trace the data through the implementation,
-   compare the result with the previous baseline, and record what we learned.
-
-The guiding question for every proposed feature is:
-
-> What failure mode does this solve, and how will we prove that it helped?
-
-## Status legend
-
-- `[x]` Completed
-- `[>]` In progress
-- `[ ]` Not started
-- `[~]` Revisit or improve later
-
-## Current project snapshot
-
-### Completed foundation
-
-- [x] One root Git repository containing the frontend and backend.
-- [x] React 19 and Vite frontend with PDF upload, question input, answer output, loading states,
-      error feedback, and a responsive retrieval-evidence view.
-- [x] FastAPI backend with typed API contracts and separate configuration, database, HTTP, and
-      RAG boundaries.
-- [x] Text-based PDF extraction with page preservation.
-- [x] Text cleaning and overlapping, page-aware chunking.
-- [x] Local `all-MiniLM-L6-v2` embeddings.
-- [x] PostgreSQL and pgvector storage with document-scoped cosine retrieval.
-- [x] Grounded generation prompt and source metadata returned to the UI.
-- [x] Local Qwen generation through a loopback-only LM Studio boundary.
-- [x] Reproducible PostgreSQL/pgvector startup through Docker Compose.
-- [x] Isolated Python environment managed by `uv`, including `pyproject.toml`, `uv.lock`, and a
-      compatibility `requirements.txt`.
-- [x] Root Makefile, environment examples, Git ignore rules, and project README.
-- [x] Ten backend tests, backend linting/formatting, and a successful frontend production build.
-
-### Current limitations
-
-- [ ] There is no automated end-to-end test covering upload, retrieval, and generation; Phase 0
-      has only a successful manual end-to-end smoke test.
-- [ ] There is no RAG evaluation dataset or quality baseline.
-- [ ] PDF parsing, embeddings, PostgreSQL, and the live model still need broader integration-test
-      coverage.
-- [ ] Retrieval always returns the configured top-k chunks without a relevance threshold.
-- [ ] Scanned PDFs, tables, richer document structure, and OCR are unsupported.
-- [ ] There is no document library, deletion, re-indexing, conversation history, authentication,
-      observability, continuous integration, or deployment workflow.
-
-## Fixed technical direction
-
-### Local model policy
-
-- Generation must run locally; the finished project will not depend on hosted LLM APIs.
-- The initial generator is **Qwen 3.6 27B in GGUF `Q6_K` quantization**, as reported by LM Studio.
-- Development hardware is a **MacBook Pro with an M4 Max and 48 GB unified memory**.
-- The current model already runs successfully on this hardware, so it is the default candidate.
-- LM Studio loads the model with a 32,768-token context window, using approximately 21.43 GiB of
-  unified memory after loading.
-- A smaller model will be considered only if evaluation shows a worthwhile improvement in
-  latency or resource use without an unacceptable loss in answer quality or faithfulness.
-- The embedding model is already local and remains independent from the generation model.
-- A loopback-only inference endpoint is acceptable: it is a local interface, not an external
-  model service, and should bind to `127.0.0.1` unless a later deployment design requires more.
-
-### Existing technology choices
-
-- Keep React and Vite for the frontend.
-- Keep Python and FastAPI for the API and RAG orchestration.
-- Keep `uv` for isolated and reproducible Python dependency management.
-- Keep PostgreSQL and pgvector while the corpus and evaluation results support that choice.
-- Avoid introducing a large RAG framework until the direct implementation becomes difficult to
-  maintain or a measured requirement justifies one.
-
-## Phase 0 — Local model migration and reproducible runtime
-
-**Goal:** Replace Gemini with the local Qwen model and establish a reliable end-to-end baseline.
-
-### Theory before coding
-
-- Understand the separation between the application, model runtime, model weights, tokenizer,
-  quantization, context window, and inference parameters.
-- Compare an in-process model with a dedicated local inference server.
-- Learn how prompt length, KV cache, quantization, and generation settings affect memory,
-  latency, and output quality.
-- Distinguish liveness from readiness: FastAPI can be alive while PostgreSQL or Qwen is not ready.
-
-### Implementation
-
-- [x] Record the exact Qwen model identifier, format, context limit, and local runtime.
-- [x] Confirm the runtime's local interface and bind it safely to the loopback address.
-- [x] Introduce a small provider-isolated local LLM client boundary.
-- [x] Replace Gemini generation calls with the local Qwen client.
-- [x] Remove `google-genai`, `GOOGLE_API_KEY`, `GEMINI_MODEL`, and Gemini-specific errors and text.
-- [x] Add settings for the local model name, endpoint, timeouts, and generation parameters.
-- [x] Add a readiness check that reports database and local-model availability without loading the
-      model repeatedly.
-- [x] Restore PostgreSQL, apply the pgvector schema, and document reproducible Docker Compose
-      startup.
-- [x] Add mocked client tests that do not require loading the 27B model.
-- [x] Run a real PDF through upload, indexing, retrieval, local generation, and source display.
-- [x] Record first-token latency, generation speed, memory use, and the working context
-      configuration.
-
-### Completion criteria
-
-- [x] The full application works without an external model API or API key.
-- [x] Backend tests, linting, formatting, dependency checks, and frontend build pass.
-- [x] Readiness diagnostics clearly identify a stopped database or model runtime.
-- [x] The README contains accurate local setup and troubleshooting instructions.
-- [x] A post-phase recap explains the local inference path from request to generated answer.
-
-### Verification record
-
-- LM Studio model: `qwen/qwen3.6-27b`, GGUF `Q6_K`, 27B parameters.
-- Loaded context: 32,768 tokens; measured loaded memory: approximately 21.43 GiB.
-- Initial short generation: approximately 1.08 seconds to first token and 18.6 tokens/second.
-- Manual RAG smoke test: a generated one-page PDF was extracted, embedded, stored, retrieved, and
-  answered correctly by local Qwen with a Page 1 citation.
-- Smoke-test answer: the model correctly retrieved `ORBIT-742` and `November` from the PDF.
-
-## Phase 1 — RAG evaluation foundation
+# AI Tutor — Learning Plan
+
+## Current stopping point
 
-**Goal:** Measure the current system before attempting retrieval improvements.
+Updated October 31, 2026.
+
+The previous application was removed locally so we can learn and rebuild from
+the beginning. Its GitHub snapshot is commit
+`757d03fc6a2dddede61c9775cd657147828e31cc` in
+[Adolph1999v/ai_tutor](https://github.com/Adolph1999v/ai_tutor/tree/757d03fc6a2dddede61c9775cd657147828e31cc).
 
-### Theory before coding
+The project and GitHub repository are named `ai_tutor`. The local branch is
+`main`. The reset and updated plan are awaiting the owner's commit and push.
+
+We have agreed on the product requirements below. New application code has not
+been approved. The next step is a theory discussion about how document retrieval,
+conversation memory, and a tutoring workflow work together.
+
+## Purpose and scope
 
-- Separate retrieval quality from generation quality.
-- Learn Recall@k, Mean Reciprocal Rank, context precision, answer correctness, faithfulness,
-  citation accuracy, abstention quality, latency, and resource measurements.
-- Understand why a plausible answer is not evidence that retrieval worked correctly.
-
-### Implementation
-
-- [ ] Select a small, representative collection of text-based PDFs.
-- [ ] Create approximately 30–50 questions, including direct facts, paraphrases, multi-passage
-      questions, exact names or numbers, and deliberately unanswerable questions.
-- [ ] Record expected answers and supporting page or chunk references.
-- [ ] Define a versioned evaluation-data format that can grow with the project.
-- [ ] Build a retrieval evaluation command that runs without generation where possible.
-- [ ] Build an answer evaluation workflow with deterministic settings and saved results.
-- [ ] Produce a baseline report for retrieval, Qwen answer quality, citation quality, latency, and
-      memory use.
+Build a local AI tutor that teaches from uploaded study material, explains its
+evidence, checks understanding, and maintains continuity through a conversation.
+The project is for learning RAG and producing a GitHub portfolio and LinkedIn demo.
 
-### Completion criteria
+AI teaching material will be the showcase corpus. The same application must also
+work with documents about other subjects. Subject knowledge and lesson structure
+must come from the selected material rather than an AI-only list built into the app.
 
-- [ ] Retrieval and generation can be evaluated separately.
-- [ ] Baseline results are saved and reproducible.
-- [ ] Future RAG changes must be compared against this baseline.
-- [ ] A post-phase recap explains every metric and the initial failure patterns.
-
-## Phase 2 — Document model and ingestion quality
-
-**Goal:** Improve the quality, traceability, and lifecycle of content entering the RAG system.
-
-### Theory before coding
-
-- Learn how chunk size, overlap, tokenizer boundaries, headings, tables, and page metadata affect
-  retrieval.
-- Understand OCR, document parsing, idempotency, content hashes, and ingestion job states.
-- Define what constitutes one document, one document version, and one retrievable chunk.
-
-### Implementation
-
-- [ ] Add a `documents` table with metadata, status, timestamps, and ingestion errors.
-- [ ] Add content hashing and duplicate-upload handling.
-- [ ] Add document deletion and safe re-indexing.
-- [ ] Move from character-only chunking toward token-aware and structure-aware chunking.
-- [ ] Preserve headings, sections, and richer chunk metadata.
-- [ ] Add OCR for scanned PDFs with clear confidence and failure handling.
-- [ ] Evaluate table extraction separately rather than flattening every table blindly.
-- [ ] Split the growing RAG module into focused ingestion, embedding, retrieval, and generation
-      modules when the new responsibilities justify it.
-- [ ] Add parser, chunker, database, and ingestion integration tests.
-
-### Completion criteria
-
-- [ ] Documents have an explicit, inspectable lifecycle.
-- [ ] Duplicate and failed ingestion are handled predictably.
-- [ ] New chunking is measured against the Phase 1 baseline.
-- [ ] Scanned-document behavior is tested and documented.
-
-## Phase 3 — Strong retrieval
-
-**Goal:** Retrieve more complete and precise evidence for varied question types.
-
-### Theory before coding
-
-- Compare dense semantic retrieval with sparse keyword retrieval.
-- Learn score calibration, metadata filtering, Reciprocal Rank Fusion, reranking, query rewriting,
-  multi-query retrieval, and diversity methods such as MMR.
-- Understand exact versus approximate vector search and when an HNSW index is justified.
-
-### Implementation
-
-- [ ] Add a relevance threshold and a clear no-evidence result.
-- [ ] Add PostgreSQL full-text retrieval alongside pgvector retrieval.
-- [ ] Fuse sparse and dense results and measure hybrid search against both individual methods.
-- [ ] Add a reranking stage for the strongest candidates.
-- [ ] Evaluate query rewriting and multi-query retrieval on known baseline failures.
-- [ ] Add metadata filters and later evaluate multi-document retrieval.
-- [ ] Add retrieval tracing that records candidates, scores, ranks, filters, and timings.
-- [ ] Introduce HNSW only when corpus size and measured latency justify approximate search.
-
-### Completion criteria
-
-- [ ] Retrieval improvements beat the saved baseline on agreed metrics.
-- [ ] Unanswerable questions no longer receive arbitrary low-quality context.
-- [ ] Every retrieval stage is inspectable and testable.
-- [ ] Complexity that does not produce a measured improvement is removed or kept experimental.
-
-## Phase 4 — Grounded generation, citations, and conversation
-
-**Goal:** Produce answers whose claims can be traced reliably to retrieved evidence.
-
-### Theory before coding
-
-- Learn grounded prompting, structured output, citation attribution, answer verification,
-  abstention, context compression, and conversation-aware query rewriting.
-- Understand why chat history should not be inserted into retrieval without controlling topic drift.
-
-### Implementation
-
-- [ ] Assign stable source identifiers to retrieved chunks.
-- [ ] Return structured citations tied to source identifiers rather than relying only on free-form
-      page references generated by the model.
-- [ ] Verify citation existence and evaluate whether cited evidence supports each claim.
-- [ ] Improve abstention when evidence is absent or conflicting.
-- [ ] Add response streaming after correctness is stable.
-- [ ] Add conversation history and rewrite follow-up questions into standalone retrieval queries.
-- [ ] Record prompt version, model version, generation parameters, timings, and token counts.
-- [ ] Compare the 27B Qwen model with a smaller local model only through the saved evaluation set.
-
-### Completion criteria
-
-- [ ] Users can trace important claims to specific evidence.
-- [ ] Citation and abstention metrics improve over the baseline.
-- [ ] Conversation history improves follow-up questions without harming retrieval isolation.
-- [ ] The chosen default model is supported by quality, latency, and memory evidence.
-
-## Phase 5 — Product experience
-
-**Goal:** Turn the retrieval pipeline into a smooth, useful document workspace.
-
-### Theory before coding
-
-- Define the user journey, document ownership model, conversational state, accessibility needs,
-  and the difference between system status and user-facing progress.
-
-### Implementation
-
-- [ ] Add a document library with upload status, selection, deletion, and re-indexing.
-- [ ] Add saved conversations scoped to documents or explicit document collections.
-- [ ] Add a PDF viewer that can navigate to cited pages and highlight evidence where possible.
-- [ ] Add clear ingestion progress and actionable failure messages.
-- [ ] Improve keyboard access, screen-reader behavior, mobile layout, and visual consistency.
-- [ ] Add frontend unit and interaction tests.
-- [ ] Introduce authentication and per-user ownership before supporting multiple users.
-
-### Completion criteria
-
-- [ ] The complete workflow is understandable without developer assistance.
-- [ ] Document and conversation state survives page refreshes appropriately.
-- [ ] Source inspection is fast and trustworthy.
-- [ ] Critical frontend journeys are covered by automated tests.
-
-## Phase 6 — Reliability, security, and deployment
-
-**Goal:** Make the application reproducible, observable, safe, and maintainable outside a single
-development machine.
-
-### Theory before coding
-
-- Learn integration-test boundaries, background work, retries, idempotency, observability,
-  resource isolation, access control, retention, backups, and deployment tradeoffs for local
-  models.
-
-### Implementation
-
-- [ ] Add continuous integration for tests, linting, dependency checks, and frontend builds.
-- [ ] Add API, PostgreSQL/pgvector, and end-to-end integration tests.
-- [ ] Move long ingestion work to a background job system when measured request times justify it.
-- [ ] Add structured logs, traces, retrieval diagnostics, latency metrics, and resource monitoring.
-- [ ] Add upload validation, rate limits, quotas, authorization, and retention policies.
-- [ ] Add database migrations, backups, and recovery documentation.
-- [ ] Define deployment profiles for development and any future shared environment.
-- [ ] Add reproducible packaging for the app and document how the local model runtime is deployed.
-
-### Completion criteria
-
-- [ ] A clean machine can reproduce the tested application environment.
-- [ ] Failures can be diagnosed from health information, logs, traces, and metrics.
-- [ ] User and document boundaries are enforced before shared use.
-- [ ] Deployment and recovery procedures have been exercised, not merely written.
+The collection-size target is more than 100,000 words. Our working interpretation
+is the total material in a selected study collection; the exact document set and
+file formats will be agreed during ingestion planning. Large material must be
+indexed and retrieved in relevant sections, with a separate outline for navigating
+and teaching the collection. The target will be verified with measured test data.
+
+## Learning agreement for developing this project
+
+For each small part:
+
+1. Explain the terms, problem, mechanism, alternatives, and tradeoffs.
+2. Work through examples and discuss questions until the learner is comfortable.
+3. Wait for explicit approval to implement that part.
+4. Implement the agreed scope and explain the relevant code and data flow.
+5. Verify the behavior and discuss the results and limitations.
+6. Save a recap, decisions, open questions, and the next starting point here or
+   in a linked lesson note.
+
+Approval for a part does not approve coding later parts. Begin each new session
+with a short recap so the learning process remains easy to resume.
+
+## Agreed tutor behavior
+
+### Document structure and discovery
+
+- Choose or create AI study material with clear headings and subheadings.
+- Preserve the hierarchy and the source locations needed for citations.
+- When asked "What can you teach me?", give a broad, approachable description
+  based on the available material.
+- Show the detailed topics when the learner asks for them.
+- Teach a selected topic one subheading at a time in a sensible order.
+- Clearly acknowledge when the material does not cover a requested subject.
+
+### Teaching and collaboration
+
+- Explain manageable portions and answer the learner's questions using the material.
+- Give useful examples and identify generated examples as illustrations.
+- Check understanding from time to time, with feedback and hints where useful.
+- Suggest a relevant next subtopic or topic based on the lesson and learner input.
+- Allow the learner to choose the direction, ask questions, or interrupt a lesson.
+- Keep follow-ups useful; do not end every message with an obligatory question.
+
+### Interactive quizzes inside the chat
+
+- Render quiz questions as interactive chat elements with clickable answer choices.
+- Also let the learner type an answer in their own words.
+- Evaluate the meaning of a typed answer against the source and question criteria.
+- Explain correct, partially correct, or mistaken answers with relevant evidence.
+- Give targeted feedback that helps the learner understand the concept.
+- Track the active quiz so an interruption does not lose the question or answer state.
+- Agree on quiz frequency and feedback details during the quiz design discussion.
+
+### Conversation continuity and topic changes
+
+- Keep relevant context from current and previous conversations about the selected
+  study material.
+- Remember the active topic, current subheading, lesson position, covered material,
+  and any unfinished quiz.
+- When the learner changes topic, answer the new question and preserve the paused
+  lesson position so the tutor can return to it immediately.
+- Resolve follow-ups using the relevant history and document evidence.
+- Preserve learning progress independently of the model's limited context window.
+- Avoid confusing an explanation given during a detour with completion of the
+  paused lesson.
+- Define how saved sessions and summaries carry context forward during the memory
+  discussion. Scope memory to the relevant learner and study collection.
+
+### Evidence spotlight
+
+- Cite the material that supports important factual claims.
+- Let the learner click a citation to inspect the supporting passage in its document.
+- Preserve original source text when displaying quotations and evidence.
+
+### Challenge a claim
+
+- Let the learner submit a claim about the material.
+- Retrieve evidence and report support, contradiction, or insufficient evidence.
+- Explain the result with citations.
+- Do not treat a failure to find support as proof that a claim is false.
+
+## Language and personality order
+
+1. Build and evaluate the English tutor in normal mode.
+2. Add pirate and Mario-style text personalities, then compare factual accuracy,
+   source support, and teaching clarity with normal mode.
+3. Explore multilingual tutoring after personalities. Tamil is the intended first
+   additional language because the learner can read and validate Tamil and English.
+
+Personality should change expression while preserving facts, citations, feedback
+criteria, and lesson progress. We must test whether this requirement holds.
+
+Spoken audio and voice agents are outside the current scope.
+
+## Evaluation we will learn and use
+
+Choose a small set of useful metrics for each part, with reviewed examples and
+saved baselines. Compare changes using the same test cases.
+
+- Retrieval: Precision@k, Recall@k, MRR, and nDCG as appropriate to the labels.
+- Generation: answer correctness, relevance, and support from retrieved evidence.
+- Citations: source existence, support for the associated claim, and claim coverage.
+- Missing evidence: appropriate abstention and honest insufficient-evidence results.
+- Tutoring: explanation clarity, topic coverage, quiz validity, and useful feedback.
+- Continuity: follow-ups, topic interruptions, resuming lessons, and unfinished quizzes.
+- Robustness: irrelevant or conflicting passages and instructions embedded in documents.
+- Performance: ingestion time, retrieval and generation latency, and memory use.
+- Later: factual preservation across personalities and accuracy and naturalness in Tamil.
+
+Explore RAGAS and LLM judges alongside deterministic checks and human review.
+Treat automated judge scores as measurements to inspect, rather than proof that
+the tutor teaches correctly. Grounding in a document and the real-world truth of
+that document are separate questions.
+
+## Frameworks and development preferences
+
+- Study LangChain, LangGraph, and LlamaIndex, including their overlapping responsibilities.
+- Choose one or a combination after understanding the workflow and its requirements.
+- Keep model inference local. Use the available Qwen model as the initial candidate;
+  verify its exact configuration during setup on the M4 Max with 48 GB memory.
+- Use project-local Python environments managed by `uv` and ignored environment files.
+- React and Vite remain the frontend preference for the chat and interactive quizzes.
+- Recreate dependencies and setup deliberately when the relevant part is approved.
+- Work only in the AI Tutor (`ai_tutor`) repository in this task.
+
+## Proposed learning sequence
+
+This sequence is a discussion aid. Each implementation still needs its own approval.
+
+| Part | Learning and implementation focus | Status |
+| --- | --- | --- |
+| 1 | RAG fundamentals, document hierarchy, conversation memory, and the tutoring workflow | Theory pending |
+| 2 | Reproducible setup and document ingestion with headings, subheadings, and source metadata | Pending |
+| 3 | English retrieval and cited answers, with an evaluation baseline and tests over 100,000 words | Pending |
+| 4 | Lesson progression, conversation continuity, topic detours, and relevant follow-ups | Pending |
+| 5 | Interactive quizzes, feedback, evidence spotlight, and claim checking | Pending |
+| 6 | Integrated English evaluation, interface refinement, and a repeatable showcase | Pending |
+| 7 | Pirate and Mario-style personalities with comparison against normal mode | Pending |
+| 8 | Tamil retrieval and tutoring with human validation | Pending |
+
+## Decisions still to discuss
+
+- The source documents, formats, and reliable way to preserve their hierarchy.
+- The learner's initial level and the amount of material in one teaching turn.
+- How topic outlines are created and checked for coverage.
+- Quiz timing, answer criteria, and how the learner resumes an interrupted lesson.
+- How history and learning state persist between sessions and influence new chats.
+- Framework responsibilities and the initial embedding, storage, and retrieval choices.
+- Concrete acceptance checks for the English showcase.
 
 ## Decision log
 
 | Date | Decision | Reason |
 | --- | --- | --- |
-| 2026-08-27 | Use one root Git repository for the complete project. | Frontend and backend belong to one coordinated application. |
-| 2026-08-27 | Use React/Vite, FastAPI, PostgreSQL/pgvector, and local sentence-transformer embeddings. | These choices provide a clear, inspectable RAG foundation with a modern UI. |
-| 2026-08-27 | Use `uv` and a project-local virtual environment. | Dependencies remain isolated and reproducible without relying on global packages. |
-| 2026-09-20 | Replace hosted LLM APIs with local inference. | Local inference avoids provider quotas, enables repeated evaluation, and keeps document context on the machine. |
-| 2026-09-20 | Use local Qwen 3.6 27B GGUF `Q6_K` through LM Studio as the initial generator. | The detected model runs successfully on the M4 Max with 48 GB unified memory; a smaller model will be chosen only from evaluation evidence. |
-| 2026-09-20 | Use a 32,768-token loaded context instead of the model's 262,144-token maximum. | The retrieved context is intentionally small, and the lower setting preserves memory and latency headroom. |
-| 2026-09-20 | Run PostgreSQL/pgvector through a pinned Docker Compose service. | A container makes the database version, extension, schema initialization, and local credentials reproducible. |
-
-## Immediate next action
-
-Begin **Phase 1** with a theory session on why RAG evaluation separates retrieval quality from
-answer quality. Then choose a small document set and define the first versioned questions and
-expected evidence before changing chunking or retrieval behavior.
+| 2026-10-03 | Restart the implementation and learn one approved part at a time. | Rebuild understanding and retain context between learning sessions. |
+| 2026-10-04 | Include RAGAS and other evaluation methods. | Measure what works and compare changes with evidence. |
+| 2026-10-31 | Build a document tutor with AI as the showcase subject and support other subjects. | Give the project a focused demo and reusable behavior. |
+| 2026-10-31 | Include evidence spotlight, claim checking, teaching, quizzes, and feedback. | Support active learning and source inspection. |
+| 2026-10-31 | Build English normal mode, then personalities, then Tamil. | Validate the core teaching behavior before expanding presentation and language. |
+| 2026-10-31 | Put clickable quizzes and typed answers inside chat; preserve lesson state across detours. | Make the tutor interactive and able to collaborate through a continuing lesson. |
+| 2026-10-31 | Rename the local project and existing GitHub repository to `ai_tutor`; the owner will commit and push the restart. | Match the name to the tutor's purpose while keeping the repository history. |
